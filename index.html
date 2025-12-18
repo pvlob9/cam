@@ -91,6 +91,26 @@
             background: #6b7280;
             cursor: not-allowed;
         }
+        
+        #flipBtn {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            background: rgba(59, 130, 246, 0.8);
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #flipBtn:active {
+            transform: scale(0.9);
+        }
     </style>
 </head>
 <body>
@@ -103,6 +123,7 @@
     
     <div id="status"></div>
     
+    <button id="flipBtn">🔄</button>
     <button id="captureBtn">📷</button>
 
     <script>
@@ -112,6 +133,10 @@
         const photoPreview = document.getElementById('photoPreview');
         const status = document.getElementById('status');
         const captureBtn = document.getElementById('captureBtn');
+        const flipBtn = document.getElementById('flipBtn');
+        
+        let currentFacingMode = 'environment'; // 'environment' = traseira, 'user' = frontal
+        let currentStream = null;
         
         // URL do Google Apps Script
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx6Hdm6y3ZXf2o3XUtmbJsMizaPoYhF8BjxncBT81Tje_dg3il-yzpTFu05RXJkdxUY/exec';
@@ -119,13 +144,25 @@
         // Iniciar câmera automaticamente
         async function startCamera() {
             try {
+                // Parar stream anterior se existir
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
+                    video: { facingMode: currentFacingMode }
                 });
+                currentStream = stream;
                 video.srcObject = stream;
             } catch (err) {
                 showStatus('Erro ao acessar câmera: ' + err.message, 'error');
             }
+        }
+        
+        // Virar câmera
+        function flipCamera() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            startCamera();
         }
         
         // Tirar foto
@@ -196,6 +233,7 @@
         
         // Event listeners
         captureBtn.addEventListener('click', takePhoto);
+        flipBtn.addEventListener('click', flipCamera);
         
         // Iniciar câmera ao carregar
         startCamera();
