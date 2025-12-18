@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Câmera QR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
+        
+        #canvas {
+            display: none;
+        }
+        
+        #preview {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #preview img {
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        #status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        
+        #status.success {
+            background: #10b981;
+        }
+        
+        #status.error {
+            background: #ef4444;
+        }
+        
+        #status.info {
+            background: #3b82f6;
+        }
+        
+        #captureBtn {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 5px solid #fff;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        #captureBtn:active {
+            transform: translateX(-50%) scale(0.9);
+        }
+        
+        #captureBtn:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    
+    <div id="preview">
+        <img id="photoPreview" alt="Preview">
+    </div>
+    
+    <div id="status"></div>
+    
+    <button id="captureBtn">📷</button>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const preview = document.getElementById('preview');
+        const photoPreview = document.getElementById('photoPreview');
+        const status = document.getElementById('status');
+        const captureBtn = document.getElementById('captureBtn');
+        
+        // URL do Google Apps Script
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx6Hdm6y3ZXf2o3XUtmbJsMizaPoYhF8BjxncBT81Tje_dg3il-yzpTFu05RXJkdxUY/exec';
+        
+        // Iniciar câmera automaticamente
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                showStatus('Erro ao acessar câmera: ' + err.message, 'error');
+            }
+        }
+        
+        // Tirar foto
+        function takePhoto() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            canvas.toBlob((blob) => {
+                photoPreview.src = URL.createObjectURL(blob);
+                preview.style.display = 'flex';
+                uploadPhoto(blob);
+            }, 'image/jpeg', 0.95);
+        }
+        
+        // Upload para Google Drive
+        async function uploadPhoto(blob) {
+            captureBtn.disabled = true;
+            showStatus('Enviando foto...', 'info');
+            
+            try {
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                
+                reader.onloadend = async () => {
+                    const base64data = reader.result.split(',')[1];
+                    
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            image: base64data,
+                            filename: `foto_${new Date().getTime()}.jpg`
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showStatus('✓ Foto enviada com sucesso!', 'success');
+                        setTimeout(() => {
+                            preview.style.display = 'none';
+                            hideStatus();
+                            captureBtn.disabled = false;
+                        }, 2000);
+                    } else {
+                        showStatus('Erro ao enviar: ' + result.error, 'error');
+                        captureBtn.disabled = false;
+                    }
+                };
+            } catch (err) {
+                showStatus('Erro: ' + err.message, 'error');
+                captureBtn.disabled = false;
+            }
+        }
+        
+        // Mostrar status
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = type;
+            status.style.display = 'block';
+        }
+        
+        // Esconder status
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+        
+        // Event listeners
+        captureBtn.addEventListener('click', takePhoto);
+        
+        // Iniciar câmera ao carregar
+        startCamera();
+    </script>
+</body>
+</html>
