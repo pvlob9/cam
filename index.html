@@ -21,7 +21,8 @@
         #video {
             width: 100vw;
             height: 100vh;
-            object-fit: contain;
+            object-fit: cover;
+            object-position: center top;
             background: #000;
             transition: transform 0.3s ease;
         }
@@ -469,6 +470,7 @@
                         capturedBlob = compressedBlob;
                         photoPreview.src = URL.createObjectURL(compressedBlob);
                         preview.style.display = 'flex';
+                        captureBtn.style.display = 'none';
                         setTimeout(() => {
                             preview.classList.add('show');
                         }, 10);
@@ -521,6 +523,7 @@
                     photoPreview.src = '';
                 }
                 captureBtn.disabled = false;
+                captureBtn.style.display = 'block';
             }, 300);
         });
         
@@ -564,6 +567,7 @@
                                 sendBtn.disabled = false;
                                 retakeBtn.disabled = false;
                                 captureBtn.disabled = false;
+                                captureBtn.style.display = 'block';
                                 if (photoPreview.src) {
                                     URL.revokeObjectURL(photoPreview.src);
                                     photoPreview.src = '';
