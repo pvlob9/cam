@@ -671,8 +671,8 @@
                     // Ajustar canvas de filtros
                     filterCanvas.width = video.videoWidth;
                     filterCanvas.height = video.videoHeight;
-                    // Iniciar detecção de faces
-                    if (faceModel) {
+                    // Iniciar detecção de faces (mesmo sem modelo, permite mudar filtros)
+                    if (!animationFrameId) {
                         detectAndDrawFilters();
                     }
                     video.onplaying = null;
