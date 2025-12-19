@@ -404,9 +404,18 @@
                 }
                 
                 // Esconder loading após câmera carregar
-                video.addEventListener('loadedmetadata', () => {
+                video.addEventListener('playing', () => {
                     setTimeout(() => {
                         loading.classList.add('hidden');
+                    }, 300);
+                }, { once: true });
+                
+                // Fallback caso 'playing' não dispare
+                video.addEventListener('loadeddata', () => {
+                    setTimeout(() => {
+                        if (!loading.classList.contains('hidden')) {
+                            loading.classList.add('hidden');
+                        }
                     }, 500);
                 }, { once: true });
                 
@@ -610,7 +619,11 @@
         // Event listeners
         captureBtn.addEventListener('click', takePhoto);
         flipBtn.addEventListener('click', flipCamera);
+        
+        // Iniciar câmera quando a página carregar
+        startCamera();
     </script>
 </body>
 </html>
+
 
