@@ -115,6 +115,94 @@
         #flipBtn:active {
             transform: scale(0.9);
         }
+        
+        #zoomControls {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 25px;
+        }
+        
+        .zoom-btn {
+            padding: 8px 16px;
+            border: 2px solid #fff;
+            border-radius: 20px;
+            background: transparent;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .zoom-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        
+        #filterControls {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 25px;
+            max-width: 90vw;
+            overflow-x: auto;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #fff;
+            border-radius: 20px;
+            background: transparent;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .filter-btn.active {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        .filter-btn:active {
+            transform: scale(0.95);
+        }
+        
+        #video.filter-snow {
+            filter: brightness(1.1) contrast(1.1);
+        }
+        
+        #video.filter-vintage {
+            filter: sepia(0.4) contrast(1.1) brightness(1.05);
+        }
+        
+        #video.filter-cold {
+            filter: hue-rotate(180deg) saturate(1.3) brightness(1.1);
+        }
+        
+        #video.filter-warm {
+            filter: sepia(0.3) saturate(1.4) brightness(1.1) hue-rotate(-10deg);
+        }
+        
+        #video.filter-festive {
+            filter: saturate(1.5) contrast(1.2) brightness(1.05);
+        }
     </style>
 </head>
 <body>
@@ -127,6 +215,21 @@
     
     <div id="status"></div>
     
+    <div id="filterControls">
+        <button class="filter-btn active" data-filter="">Normal</button>
+        <button class="filter-btn" data-filter="snow">❄️ Neve</button>
+        <button class="filter-btn" data-filter="vintage">🎄 Vintage</button>
+        <button class="filter-btn" data-filter="cold">🌨️ Frio</button>
+        <button class="filter-btn" data-filter="warm">🔥 Quente</button>
+        <button class="filter-btn" data-filter="festive">🎅 Festivo</button>
+    </div>
+    
+    <div id="zoomControls">
+        <button class="zoom-btn" data-zoom="0.5">0.5x</button>
+        <button class="zoom-btn active" data-zoom="1">1x</button>
+        <button class="zoom-btn" data-zoom="2">2x</button>
+    </div>
+    
     <button id="flipBtn">🔄</button>
     <button id="captureBtn">📷</button>
 
@@ -138,9 +241,13 @@
         const status = document.getElementById('status');
         const captureBtn = document.getElementById('captureBtn');
         const flipBtn = document.getElementById('flipBtn');
+        const zoomBtns = document.querySelectorAll('.zoom-btn');
+        const filterBtns = document.querySelectorAll('.filter-btn');
         
         let currentFacingMode = 'environment';
         let currentStream = null;
+        let currentZoom = 1;
+        let currentFilter = '';
         
         // URL do Google Apps Script
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx6Hdm6y3ZXf2o3XUtmbJsMizaPoYhF8BjxncBT81Tje_dg3il-yzpTFu05RXJkdxUY/exec';
@@ -164,17 +271,83 @@
                 currentStream = stream;
                 video.srcObject = stream;
                 
-                // Tentar ativar autofoco
+                // Tentar ativar autofoco e zoom
                 const track = stream.getVideoTracks()[0];
                 const capabilities = track.getCapabilities();
+                
                 if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
                     await track.applyConstraints({
                         advanced: [{ focusMode: 'continuous' }]
                     });
                 }
+                
+                // Aplicar zoom atual
+                applyZoom();
             } catch (err) {
                 showStatus('Erro ao acessar câmera: ' + err.message, 'error');
             }
+        }
+        
+        // Aplicar zoom
+        async function applyZoom() {
+            if (!currentStream) return;
+            
+            const track = currentStream.getVideoTracks()[0];
+            const capabilities = track.getCapabilities();
+            
+            if (capabilities.zoom) {
+                const settings = track.getSettings();
+                const zoomValue = currentZoom === 0.5 
+                    ? capabilities.zoom.min 
+                    : currentZoom === 2 
+                    ? Math.min(capabilities.zoom.max, 2)
+                    : 1;
+                    
+                await track.applyConstraints({
+                    advanced: [{ zoom: zoomValue }]
+                });
+            }
+        }
+        
+        // Mudar zoom
+        function changeZoom(zoom) {
+            currentZoom = parseFloat(zoom);
+            
+            // Atualizar botões ativos
+            zoomBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (parseFloat(btn.dataset.zoom) === currentZoom) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            applyZoom();
+        }
+        
+        // Mudar filtro
+        function changeFilter(filter) {
+            currentFilter = filter;
+            
+            // Remover todos os filtros
+            video.className = '';
+            
+            // Adicionar novo filtro
+            if (filter) {
+                video.classList.add('filter-' + filter);
+            }
+            
+            // Adicionar classe flipped se necessário
+            if (currentFacingMode === 'user') {
+                video.classList.add('flipped');
+            }
+            
+            // Atualizar botões ativos
+            filterBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('active');
+                }
+            });
         }
         
         // Virar câmera
@@ -196,6 +369,19 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
+            
+            // Aplicar filtro ao canvas
+            if (currentFilter === 'snow') {
+                ctx.filter = 'brightness(1.1) contrast(1.1)';
+            } else if (currentFilter === 'vintage') {
+                ctx.filter = 'sepia(0.4) contrast(1.1) brightness(1.05)';
+            } else if (currentFilter === 'cold') {
+                ctx.filter = 'hue-rotate(180deg) saturate(1.3) brightness(1.1)';
+            } else if (currentFilter === 'warm') {
+                ctx.filter = 'sepia(0.3) saturate(1.4) brightness(1.1) hue-rotate(-10deg)';
+            } else if (currentFilter === 'festive') {
+                ctx.filter = 'saturate(1.5) contrast(1.2) brightness(1.05)';
+            }
             
             // Se estiver invertido (câmera frontal), desinverte na foto final
             if (currentFacingMode === 'user') {
@@ -267,6 +453,12 @@
         // Event listeners
         captureBtn.addEventListener('click', takePhoto);
         flipBtn.addEventListener('click', flipCamera);
+        zoomBtns.forEach(btn => {
+            btn.addEventListener('click', () => changeZoom(btn.dataset.zoom));
+        });
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => changeFilter(btn.dataset.filter));
+        });
         
         // Iniciar câmera ao carregar
         startCamera();
