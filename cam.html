@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Câmera QR</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
     <style>
         * {
             margin: 0;
@@ -22,10 +24,66 @@
             width: 100vw;
             height: 100vh;
             object-fit: cover;
+            object-position: center top;
+            background: #000;
+            transition: transform 0.3s ease;
+        }
+        
+        #video.flipped {
+            transform: scaleX(-1);
         }
         
         #canvas {
             display: none;
+        }
+        
+        #filterCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        #filterControls {
+            position: fixed;
+            bottom: 130px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 10px 15px;
+            border-radius: 25px;
+            max-width: 90vw;
+            overflow-x: auto;
+            z-index: 100;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            background: transparent;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .filter-btn.active {
+            background: #fff;
+            border-color: #fff;
+            color: #000;
+        }
+        
+        .filter-btn:active {
+            transform: scale(0.95);
         }
         
         #preview {
@@ -38,73 +96,321 @@
             display: none;
             align-items: center;
             justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #preview.show {
+            opacity: 1;
         }
         
         #preview img {
             max-width: 90%;
-            max-height: 90%;
+            max-height: 70%;
+            border-radius: 0;
+            box-shadow: none;
         }
         
         #status {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            padding: 15px;
-            border-radius: 10px;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 6px;
             text-align: center;
-            font-weight: bold;
+            font-weight: 400;
+            font-size: 14px;
             display: none;
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+            max-width: 80%;
+            letter-spacing: 0.3px;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
         
         #status.success {
-            background: #10b981;
+            background: rgba(16, 185, 129, 0.95);
+            backdrop-filter: blur(10px);
         }
         
         #status.error {
-            background: #ef4444;
+            background: rgba(239, 68, 68, 0.95);
+            backdrop-filter: blur(10px);
         }
         
         #status.info {
-            background: #3b82f6;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         #captureBtn {
             position: fixed;
-            bottom: 30px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            width: 70px;
-            height: 70px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            border: 5px solid #fff;
-            background: #3b82f6;
+            border: 4px solid #fff;
+            background: transparent;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+        
+        #captureBtn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #fff;
+            transition: all 0.2s ease;
         }
         
         #captureBtn:active {
-            transform: translateX(-50%) scale(0.9);
+            transform: translateX(-50%) scale(0.92);
+        }
+        
+        #captureBtn:active::after {
+            width: 56px;
+            height: 56px;
         }
         
         #captureBtn:disabled {
-            background: #6b7280;
+            opacity: 0.5;
             cursor: not-allowed;
         }
+        
+        #captureBtn:disabled::after {
+            background: #999;
+        }
+        
+        #flipBtn {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            z-index: 100;
+        }
+        
+        #flipBtn:active {
+            transform: scale(0.95);
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
+        #flipBtn svg {
+            fill: #fff;
+            width: 20px;
+            height: 20px;
+        }
+        
+        
+        /* Loading Spinner */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.3s ease;
+        }
+        
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        #loadingText {
+            margin-top: 20px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Contador Regressivo */
+        #countdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 140px;
+            font-weight: 300;
+            color: #fff;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1500;
+            display: none;
+            animation: countdownPop 0.5s ease;
+            letter-spacing: -5px;
+        }
+        
+        @keyframes countdownPop {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* Flash ao capturar */
+        #flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1400;
+        }
+        
+        #flash.active {
+            animation: flash 0.3s ease;
+        }
+        
+        @keyframes flash {
+            0% { opacity: 0; }
+            50% { opacity: 0.9; }
+            100% { opacity: 0; }
+        }
+        
+        /* Botões de preview */
+        #previewControls {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .preview-btn {
+            padding: 14px 32px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.3px;
+        }
+        
+        .preview-btn.retake {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .preview-btn.send {
+            background: #fff;
+            border-color: #fff;
+            color: #000;
+        }
+        
+        .preview-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .preview-btn.send:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .preview-btn:active {
+            transform: scale(0.98);
+        }
+        
     </style>
 </head>
 <body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">Carregando câmera...</div>
+    </div>
+    
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
+    <canvas id="filterCanvas"></canvas>
+    <div id="flash"></div>
+    <div id="countdown"></div>
+    
+    <div id="filterControls">
+        <button class="filter-btn" data-filter="none">Sem Filtro</button>
+        <button class="filter-btn active" data-filter="santa">Papai Noel</button>
+        <button class="filter-btn" data-filter="reindeer">Rena</button>
+        <button class="filter-btn" data-filter="elf">Elfo</button>
+        <button class="filter-btn" data-filter="snowman">Boneco Neve</button>
+    </div>
     
     <div id="preview">
         <img id="photoPreview" alt="Preview">
+        <div id="previewControls">
+            <button class="preview-btn retake" id="retakeBtn">Refazer</button>
+            <button class="preview-btn send" id="sendBtn">Enviar</button>
+        </div>
     </div>
     
     <div id="status"></div>
     
-    <button id="captureBtn">📷</button>
-
+    <button id="flipBtn">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+            <path d="M3 9L3 18C3 19.6569 4.34315 21 6 21L18 21C19.6569 21 21 19.6569 21 18L21 9M16 3L12 7M12 7L8 3M12 7L12 15"/>
+        </svg>
+    </button>
+    <button id="captureBtn"></button>
+    
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -112,39 +418,423 @@
         const photoPreview = document.getElementById('photoPreview');
         const status = document.getElementById('status');
         const captureBtn = document.getElementById('captureBtn');
+        const flipBtn = document.getElementById('flipBtn');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const countdown = document.getElementById('countdown');
+        const flash = document.getElementById('flash');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        let currentFacingMode = 'environment';
+        let currentStream = null;
+        let capturedBlob = null;
+        let countdownInterval = null;
+        let currentFilter = 'santa';
+        let faceModel = null;
+        let animationFrameId = null;
+        const filterCanvas = document.getElementById('filterCanvas');
+        const filterCtx = filterCanvas.getContext('2d');
+        const filterBtns = document.querySelectorAll('.filter-btn');
         
         // URL do Google Apps Script
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx6Hdm6y3ZXf2o3XUtmbJsMizaPoYhF8BjxncBT81Tje_dg3il-yzpTFu05RXJkdxUY/exec';
         
+        // Carregar modelo de detecção facial
+        async function loadFaceModel() {
+            try {
+                const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
+                const detectorConfig = {
+                    runtime: 'mediapipe',
+                    solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh',
+                    refineLandmarks: true
+                };
+                faceModel = await faceLandmarksDetection.createDetector(model, detectorConfig);
+            } catch (err) {
+                console.error('Erro ao carregar modelo facial:', err);
+            }
+        }
+        
+        // Aplicar filtros natalinos
+        function drawFilter(ctx, faces, filter) {
+            if (!faces || faces.length === 0 || filter === 'none') return;
+            
+            faces.forEach(face => {
+                const keypoints = face.keypoints;
+                if (!keypoints || keypoints.length < 10) return;
+                
+                // MediaPipe Face Mesh landmarks principais
+                // Índices: nariz=4, olho esquerdo=33, olho direito=263, queixo=152, testa=10
+                const nose = keypoints[4] || {x: 0, y: 0};
+                const leftEye = keypoints[33] || {x: 0, y: 0};
+                const rightEye = keypoints[263] || {x: 0, y: 0};
+                const chin = keypoints[152] || {x: 0, y: 0};
+                const forehead = keypoints[10] || {x: 0, y: 0};
+                const leftCheek = keypoints[116] || {x: 0, y: 0};
+                const rightCheek = keypoints[345] || {x: 0, y: 0};
+                
+                if (!nose || !leftEye || !rightEye || nose.x === 0) return;
+                
+                const eyeDist = Math.abs(rightEye.x - leftEye.x);
+                const faceWidth = eyeDist * 2.5;
+                const faceHeight = Math.abs(chin.y - forehead.y) || eyeDist * 3;
+                
+                ctx.save();
+                
+                switch(filter) {
+                    case 'santa':
+                        // Gorro de Papai Noel
+                        const hatY = (forehead?.y || nose.y - faceHeight * 0.6) - faceHeight * 0.3;
+                        const hatHeight = faceHeight * 0.8;
+                        const hatWidth = faceWidth * 1.2;
+                        
+                        // Corpo do gorro (vermelho)
+                        ctx.fillStyle = '#DC143C';
+                        ctx.beginPath();
+                        ctx.arc(nose.x, hatY, hatWidth / 2, Math.PI, 0, false);
+                        ctx.fill();
+                        
+                        // Bola branca na ponta
+                        ctx.fillStyle = '#FFF';
+                        ctx.beginPath();
+                        ctx.arc(nose.x, hatY - hatHeight * 0.4, hatWidth * 0.15, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Barba branca
+                        const beardY = nose.y + faceHeight * 0.4;
+                        const beardWidth = faceWidth * 1.3;
+                        const beardHeight = faceHeight * 0.6;
+                        
+                        ctx.fillStyle = '#FFF';
+                        ctx.beginPath();
+                        ctx.ellipse(nose.x, beardY, beardWidth / 2, beardHeight / 2, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Bigode
+                        ctx.fillStyle = '#FFF';
+                        ctx.beginPath();
+                        ctx.ellipse(nose.x, nose.y + faceHeight * 0.15, eyeDist * 0.6, eyeDist * 0.25, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                        
+                    case 'reindeer':
+                        // Nariz vermelho (bolinha)
+                        ctx.fillStyle = '#DC143C';
+                        ctx.beginPath();
+                        ctx.arc(nose.x, nose.y, eyeDist * 0.2, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Chifres
+                        const hornY = (forehead?.y || nose.y - faceHeight * 0.6) - faceHeight * 0.2;
+                        ctx.strokeStyle = '#8B4513';
+                        ctx.lineWidth = faceWidth * 0.08;
+                        ctx.beginPath();
+                        // Chifre esquerdo
+                        ctx.moveTo(leftEye.x - eyeDist * 0.3, hornY);
+                        ctx.lineTo(leftEye.x - eyeDist * 0.6, hornY - faceHeight * 0.4);
+                        ctx.stroke();
+                        // Chifre direito
+                        ctx.moveTo(rightEye.x + eyeDist * 0.3, hornY);
+                        ctx.lineTo(rightEye.x + eyeDist * 0.6, hornY - faceHeight * 0.4);
+                        ctx.stroke();
+                        break;
+                        
+                    case 'elf':
+                        // Orelhas pontudas
+                        const earY = nose.y - faceHeight * 0.3;
+                        ctx.fillStyle = '#FFDBB3';
+                        // Orelha esquerda
+                        ctx.beginPath();
+                        ctx.moveTo(leftCheek.x - eyeDist * 0.4, earY);
+                        ctx.lineTo(leftCheek.x - eyeDist * 0.6, earY - faceHeight * 0.3);
+                        ctx.lineTo(leftCheek.x - eyeDist * 0.35, earY - faceHeight * 0.2);
+                        ctx.closePath();
+                        ctx.fill();
+                        // Orelha direita
+                        ctx.beginPath();
+                        ctx.moveTo(rightCheek.x + eyeDist * 0.4, earY);
+                        ctx.lineTo(rightCheek.x + eyeDist * 0.6, earY - faceHeight * 0.3);
+                        ctx.lineTo(rightCheek.x + eyeDist * 0.35, earY - faceHeight * 0.2);
+                        ctx.closePath();
+                        ctx.fill();
+                        
+                        // Gorro verde de elfo
+                        const elfHatY = (forehead?.y || nose.y - faceHeight * 0.6) - faceHeight * 0.25;
+                        ctx.fillStyle = '#228B22';
+                        ctx.beginPath();
+                        ctx.arc(nose.x, elfHatY, hatWidth / 2.2, Math.PI, 0, false);
+                        ctx.fill();
+                        // Ponta do gorro
+                        ctx.beginPath();
+                        ctx.moveTo(nose.x, elfHatY);
+                        ctx.lineTo(nose.x - hatWidth * 0.2, elfHatY - hatHeight * 0.5);
+                        ctx.lineTo(nose.x + hatWidth * 0.2, elfHatY - hatHeight * 0.5);
+                        ctx.closePath();
+                        ctx.fill();
+                        break;
+                        
+                    case 'snowman':
+                        // Chapéu de boneco de neve (preto cilíndrico)
+                        const snowHatY = (forehead?.y || nose.y - faceHeight * 0.6) - faceHeight * 0.35;
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(nose.x - hatWidth / 2.5, snowHatY - hatHeight * 0.3, hatWidth / 1.25, hatHeight * 0.15);
+                        ctx.fillRect(nose.x - hatWidth / 3, snowHatY - hatHeight * 0.6, hatWidth / 1.5, hatHeight * 0.3);
+                        
+                        // Cachecol (lenço)
+                        ctx.fillStyle = '#FF6347';
+                        const scarfY = nose.y + faceHeight * 0.2;
+                        ctx.fillRect(nose.x - hatWidth / 2, scarfY, hatWidth, faceHeight * 0.15);
+                        break;
+                }
+                
+                ctx.restore();
+            });
+        }
+        
+        // Detectar faces e aplicar filtros
+        async function detectAndDrawFilters() {
+            if (!video || !faceModel || currentFilter === 'none') {
+                filterCtx.clearRect(0, 0, filterCanvas.width, filterCanvas.height);
+                animationFrameId = requestAnimationFrame(detectAndDrawFilters);
+                return;
+            }
+            
+            try {
+                const faces = await faceModel.estimateFaces(video, { flipHorizontal: currentFacingMode === 'user' });
+                
+                filterCanvas.width = video.videoWidth;
+                filterCanvas.height = video.videoHeight;
+                filterCtx.clearRect(0, 0, filterCanvas.width, filterCanvas.height);
+                
+                if (faces.length > 0) {
+                    // Converter coordenadas normalizadas para pixels
+                    const scaledFaces = faces.map(face => ({
+                        keypoints: face.keypoints.map((kp, idx) => {
+                            // MediaPipe retorna coordenadas normalizadas (0-1)
+                            const x = kp.x * filterCanvas.width;
+                            const y = kp.y * filterCanvas.height;
+                            return { x, y, name: idx.toString() };
+                        })
+                    }));
+                    
+                    drawFilter(filterCtx, scaledFaces, currentFilter);
+                }
+            } catch (err) {
+                console.error('Erro na detecção:', err);
+            }
+            
+            animationFrameId = requestAnimationFrame(detectAndDrawFilters);
+        }
+        
+        // Mudar filtro
+        function changeFilter(filter) {
+            currentFilter = filter;
+            
+            filterBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+        
+        // Event listeners para filtros
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                changeFilter(btn.dataset.filter);
+            });
+        });
+        
         // Iniciar câmera automaticamente
         async function startCamera() {
+            loading.classList.remove('hidden');
+            loadingText.textContent = 'Carregando câmera...';
+            
             try {
+                // Parar stream anterior se existir
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
+                    video: { 
+                        facingMode: currentFacingMode
+                    }
                 });
+                
+                currentStream = stream;
                 video.srcObject = stream;
+                
+                // Esconder loading assim que vídeo começar a reproduzir
+                video.onplaying = () => {
+                    loading.classList.add('hidden');
+                    // Ajustar canvas de filtros
+                    filterCanvas.width = video.videoWidth;
+                    filterCanvas.height = video.videoHeight;
+                    // Iniciar detecção de faces
+                    if (faceModel) {
+                        detectAndDrawFilters();
+                    }
+                    video.onplaying = null;
+                };
+                
             } catch (err) {
+                loadingText.textContent = 'Erro ao acessar câmera';
                 showStatus('Erro ao acessar câmera: ' + err.message, 'error');
+                setTimeout(() => {
+                    loading.classList.add('hidden');
+                }, 2000);
             }
+        }
+        
+        // Virar câmera
+        function flipCamera() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            
+            // Inverter visualmente quando for câmera frontal
+            if (currentFacingMode === 'user') {
+                video.classList.add('flipped');
+            } else {
+                video.classList.remove('flipped');
+            }
+            
+            startCamera();
+        }
+        
+        // Contador regressivo
+        function startCountdown(callback) {
+            let count = 3;
+            countdown.textContent = count;
+            countdown.style.display = 'block';
+            captureBtn.disabled = true;
+            
+            countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdown.textContent = count;
+                } else {
+                    countdown.textContent = '';
+                    clearInterval(countdownInterval);
+                    countdown.style.display = 'none';
+                    callback();
+                }
+            }, 1000);
         }
         
         // Tirar foto
         function takePhoto() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            canvas.toBlob((blob) => {
-                photoPreview.src = URL.createObjectURL(blob);
-                preview.style.display = 'flex';
-                uploadPhoto(blob);
-            }, 'image/jpeg', 0.95);
+            startCountdown(async () => {
+                // Flash visual
+                flash.classList.add('active');
+                setTimeout(() => {
+                    flash.classList.remove('active');
+                }, 300);
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // Se estiver invertido (câmera frontal), desinverte na foto final
+                if (currentFacingMode === 'user') {
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                }
+                
+                ctx.drawImage(video, 0, 0);
+                
+                // Aplicar filtros na foto também
+                if (currentFilter !== 'none' && faceModel) {
+                    try {
+                        const faces = await faceModel.estimateFaces(video, { flipHorizontal: currentFacingMode === 'user' });
+                        if (faces.length > 0) {
+                            const scaledFaces = faces.map(face => ({
+                                keypoints: face.keypoints.map((kp, idx) => {
+                                    const x = kp.x * canvas.width;
+                                    const y = kp.y * canvas.height;
+                                    return { x, y, name: idx.toString() };
+                                })
+                            }));
+                            drawFilter(ctx, scaledFaces, currentFilter);
+                        }
+                    } catch (err) {
+                        console.error('Erro ao aplicar filtro na foto:', err);
+                    }
+                }
+                
+                // Comprimir imagem
+                canvas.toBlob((blob) => {
+                    compressImage(blob, (compressedBlob) => {
+                        capturedBlob = compressedBlob;
+                        photoPreview.src = URL.createObjectURL(compressedBlob);
+                        preview.style.display = 'flex';
+                        captureBtn.style.display = 'none';
+                        setTimeout(() => {
+                            preview.classList.add('show');
+                        }, 10);
+                    });
+                }, 'image/jpeg', 0.85); // Qualidade 85% para compressão
+            });
         }
+        
+        // Comprimir imagem
+        function compressImage(blob, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            
+            reader.onloadend = () => {
+                const img = new Image();
+                img.src = reader.result;
+                
+                img.onload = () => {
+                    const maxWidth = 1920;
+                    const maxHeight = 2560;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Redimensionar se necessário
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width = width * ratio;
+                        height = height * ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Converter para blob com qualidade reduzida
+                    canvas.toBlob(callback, 'image/jpeg', 0.8);
+                };
+            };
+        }
+        
+        // Refazer foto
+        retakeBtn.addEventListener('click', () => {
+            preview.classList.remove('show');
+            setTimeout(() => {
+                preview.style.display = 'none';
+                capturedBlob = null;
+                if (photoPreview.src) {
+                    URL.revokeObjectURL(photoPreview.src);
+                    photoPreview.src = '';
+                }
+                captureBtn.disabled = false;
+                captureBtn.style.display = 'block';
+            }, 300);
+        });
+        
+        // Enviar foto
+        sendBtn.addEventListener('click', () => {
+            if (capturedBlob) {
+                uploadPhoto(capturedBlob);
+            }
+        });
         
         // Upload para Google Drive
         async function uploadPhoto(blob) {
-            captureBtn.disabled = true;
+            sendBtn.disabled = true;
+            retakeBtn.disabled = true;
             showStatus('Enviando foto...', 'info');
             
             try {
@@ -165,20 +855,33 @@
                     const result = await response.json();
                     
                     if (result.success) {
-                        showStatus('✓ Foto enviada com sucesso!', 'success');
+                        showStatus('Foto enviada com sucesso', 'success');
                         setTimeout(() => {
-                            preview.style.display = 'none';
-                            hideStatus();
-                            captureBtn.disabled = false;
+                            preview.classList.remove('show');
+                            setTimeout(() => {
+                                preview.style.display = 'none';
+                                hideStatus();
+                                sendBtn.disabled = false;
+                                retakeBtn.disabled = false;
+                                captureBtn.disabled = false;
+                                captureBtn.style.display = 'block';
+                                if (photoPreview.src) {
+                                    URL.revokeObjectURL(photoPreview.src);
+                                    photoPreview.src = '';
+                                }
+                                capturedBlob = null;
+                            }, 300);
                         }, 2000);
                     } else {
                         showStatus('Erro ao enviar: ' + result.error, 'error');
-                        captureBtn.disabled = false;
+                        sendBtn.disabled = false;
+                        retakeBtn.disabled = false;
                     }
                 };
             } catch (err) {
                 showStatus('Erro: ' + err.message, 'error');
-                captureBtn.disabled = false;
+                sendBtn.disabled = false;
+                retakeBtn.disabled = false;
             }
         }
         
@@ -196,9 +899,23 @@
         
         // Event listeners
         captureBtn.addEventListener('click', takePhoto);
+        flipBtn.addEventListener('click', flipCamera);
         
-        // Iniciar câmera ao carregar
-        startCamera();
+        // Carregar modelo e iniciar câmera
+        (async () => {
+            try {
+                loadingText.textContent = 'Carregando modelo facial...';
+                await loadFaceModel();
+                loadingText.textContent = 'Carregando câmera...';
+                startCamera();
+            } catch (err) {
+                console.error('Erro ao inicializar:', err);
+                loadingText.textContent = 'Carregando câmera...';
+                startCamera();
+            }
+        })();
     </script>
 </body>
 </html>
+
+
