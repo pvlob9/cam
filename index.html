@@ -22,6 +22,7 @@
             width: 100vw;
             height: 100vh;
             object-fit: cover;
+            transition: transform 0.3s ease;
         }
         
         #video.flipped {
@@ -42,154 +43,312 @@
             display: none;
             align-items: center;
             justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #preview.show {
+            opacity: 1;
         }
         
         #preview img {
             max-width: 90%;
-            max-height: 90%;
+            max-height: 70%;
+            border-radius: 0;
+            box-shadow: none;
         }
         
         #status {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            padding: 15px;
-            border-radius: 10px;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 6px;
             text-align: center;
-            font-weight: bold;
+            font-weight: 400;
+            font-size: 14px;
             display: none;
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+            max-width: 80%;
+            letter-spacing: 0.3px;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
         
         #status.success {
-            background: #10b981;
+            background: rgba(16, 185, 129, 0.95);
+            backdrop-filter: blur(10px);
         }
         
         #status.error {
-            background: #ef4444;
+            background: rgba(239, 68, 68, 0.95);
+            backdrop-filter: blur(10px);
         }
         
         #status.info {
-            background: #3b82f6;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         #captureBtn {
             position: fixed;
-            bottom: 30px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            width: 70px;
-            height: 70px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            border: 5px solid #fff;
-            background: #3b82f6;
+            border: 4px solid #fff;
+            background: transparent;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+        
+        #captureBtn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #fff;
+            transition: all 0.2s ease;
         }
         
         #captureBtn:active {
-            transform: translateX(-50%) scale(0.9);
+            transform: translateX(-50%) scale(0.92);
+        }
+        
+        #captureBtn:active::after {
+            width: 56px;
+            height: 56px;
         }
         
         #captureBtn:disabled {
-            background: #6b7280;
+            opacity: 0.5;
             cursor: not-allowed;
+        }
+        
+        #captureBtn:disabled::after {
+            background: #999;
         }
         
         #flipBtn {
             position: fixed;
             top: 30px;
             right: 30px;
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            border: 3px solid #fff;
-            background: rgba(59, 130, 246, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
             cursor: pointer;
-            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s ease;
+            z-index: 100;
         }
         
         #flipBtn:active {
-            transform: scale(0.9);
-        }
-        
-        #filterControls {
-            position: fixed;
-            top: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 15px;
-            border-radius: 25px;
-            max-width: 90vw;
-            overflow-x: auto;
-        }
-        
-        .filter-btn {
-            padding: 8px 16px;
-            border: 2px solid #fff;
-            border-radius: 20px;
-            background: transparent;
-            color: #fff;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-        
-        .filter-btn.active {
-            background: #ef4444;
-            border-color: #ef4444;
-        }
-        
-        .filter-btn:active {
             transform: scale(0.95);
+            background: rgba(0, 0, 0, 0.6);
         }
         
-        #video.filter-snow {
-            filter: brightness(1.1) contrast(1.1);
+        #flipBtn svg {
+            fill: #fff;
+            width: 20px;
+            height: 20px;
         }
         
-        #video.filter-vintage {
-            filter: sepia(0.4) contrast(1.1) brightness(1.05);
+        
+        /* Loading Spinner */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.3s ease;
         }
         
-        #video.filter-cold {
-            filter: hue-rotate(180deg) saturate(1.3) brightness(1.1);
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
         
-        #video.filter-warm {
-            filter: sepia(0.3) saturate(1.4) brightness(1.1) hue-rotate(-10deg);
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
         
-        #video.filter-festive {
-            filter: saturate(1.5) contrast(1.2) brightness(1.05);
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
+        
+        #loadingText {
+            margin-top: 20px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Contador Regressivo */
+        #countdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 140px;
+            font-weight: 300;
+            color: #fff;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1500;
+            display: none;
+            animation: countdownPop 0.5s ease;
+            letter-spacing: -5px;
+        }
+        
+        @keyframes countdownPop {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* Flash ao capturar */
+        #flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1400;
+        }
+        
+        #flash.active {
+            animation: flash 0.3s ease;
+        }
+        
+        @keyframes flash {
+            0% { opacity: 0; }
+            50% { opacity: 0.9; }
+            100% { opacity: 0; }
+        }
+        
+        /* Botões de preview */
+        #previewControls {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .preview-btn {
+            padding: 14px 32px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.3px;
+        }
+        
+        .preview-btn.retake {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .preview-btn.send {
+            background: #fff;
+            border-color: #fff;
+            color: #000;
+        }
+        
+        .preview-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .preview-btn.send:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .preview-btn:active {
+            transform: scale(0.98);
+        }
+        
     </style>
 </head>
 <body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">Carregando câmera...</div>
+    </div>
+    
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
+    <div id="flash"></div>
+    <div id="countdown"></div>
     
     <div id="preview">
         <img id="photoPreview" alt="Preview">
+        <div id="previewControls">
+            <button class="preview-btn retake" id="retakeBtn">Refazer</button>
+            <button class="preview-btn send" id="sendBtn">Enviar</button>
+        </div>
     </div>
     
     <div id="status"></div>
     
     <button id="flipBtn">
-        <svg viewBox="0 0 24 24">
+        <svg viewBox="0 0 24 24" width="24" height="24">
             <path d="M3 9L3 18C3 19.6569 4.34315 21 6 21L18 21C19.6569 21 21 19.6569 21 18L21 9M16 3L12 7M12 7L8 3M12 7L12 15"/>
         </svg>
     </button>
     <button id="captureBtn"></button>
-
+    
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -198,15 +357,26 @@
         const status = document.getElementById('status');
         const captureBtn = document.getElementById('captureBtn');
         const flipBtn = document.getElementById('flipBtn');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const countdown = document.getElementById('countdown');
+        const flash = document.getElementById('flash');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const sendBtn = document.getElementById('sendBtn');
         
         let currentFacingMode = 'environment';
         let currentStream = null;
+        let capturedBlob = null;
+        let countdownInterval = null;
         
         // URL do Google Apps Script
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx6Hdm6y3ZXf2o3XUtmbJsMizaPoYhF8BjxncBT81Tje_dg3il-yzpTFu05RXJkdxUY/exec';
         
         // Iniciar câmera automaticamente
         async function startCamera() {
+            loading.classList.remove('hidden');
+            loadingText.textContent = 'Carregando câmera...';
+            
             try {
                 // Parar stream anterior se existir
                 if (currentStream) {
@@ -232,35 +402,21 @@
                         advanced: [{ focusMode: 'continuous' }]
                     });
                 }
+                
+                // Esconder loading após câmera carregar
+                video.addEventListener('loadedmetadata', () => {
+                    setTimeout(() => {
+                        loading.classList.add('hidden');
+                    }, 500);
+                }, { once: true });
+                
             } catch (err) {
+                loadingText.textContent = 'Erro ao acessar câmera';
                 showStatus('Erro ao acessar câmera: ' + err.message, 'error');
+                setTimeout(() => {
+                    loading.classList.add('hidden');
+                }, 2000);
             }
-        }
-        
-        // Mudar filtro
-        function changeFilter(filter) {
-            currentFilter = filter;
-            
-            // Remover todos os filtros
-            video.className = '';
-            
-            // Adicionar novo filtro
-            if (filter) {
-                video.classList.add('filter-' + filter);
-            }
-            
-            // Adicionar classe flipped se necessário
-            if (currentFacingMode === 'user') {
-                video.classList.add('flipped');
-            }
-            
-            // Atualizar botões ativos
-            filterBtns.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.filter === filter) {
-                    btn.classList.add('active');
-                }
-            });
         }
         
         // Virar câmera
@@ -277,30 +433,119 @@
             startCamera();
         }
         
+        // Contador regressivo
+        function startCountdown(callback) {
+            let count = 3;
+            countdown.textContent = count;
+            countdown.style.display = 'block';
+            captureBtn.disabled = true;
+            
+            countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdown.textContent = count;
+                } else {
+                    countdown.textContent = '';
+                    clearInterval(countdownInterval);
+                    countdown.style.display = 'none';
+                    callback();
+                }
+            }, 1000);
+        }
+        
         // Tirar foto
         function takePhoto() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            
-            // Se estiver invertido (câmera frontal), desinverte na foto final
-            if (currentFacingMode === 'user') {
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-            }
-            
-            ctx.drawImage(video, 0, 0);
-            
-            canvas.toBlob((blob) => {
-                photoPreview.src = URL.createObjectURL(blob);
-                preview.style.display = 'flex';
-                uploadPhoto(blob);
-            }, 'image/jpeg', 1.0);
+            startCountdown(() => {
+                // Flash visual
+                flash.classList.add('active');
+                setTimeout(() => {
+                    flash.classList.remove('active');
+                }, 300);
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // Se estiver invertido (câmera frontal), desinverte na foto final
+                if (currentFacingMode === 'user') {
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                }
+                
+                ctx.drawImage(video, 0, 0);
+                
+                // Comprimir imagem
+                canvas.toBlob((blob) => {
+                    compressImage(blob, (compressedBlob) => {
+                        capturedBlob = compressedBlob;
+                        photoPreview.src = URL.createObjectURL(compressedBlob);
+                        preview.style.display = 'flex';
+                        setTimeout(() => {
+                            preview.classList.add('show');
+                        }, 10);
+                    });
+                }, 'image/jpeg', 0.85); // Qualidade 85% para compressão
+            });
         }
+        
+        // Comprimir imagem
+        function compressImage(blob, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            
+            reader.onloadend = () => {
+                const img = new Image();
+                img.src = reader.result;
+                
+                img.onload = () => {
+                    const maxWidth = 1920;
+                    const maxHeight = 2560;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Redimensionar se necessário
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width = width * ratio;
+                        height = height * ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Converter para blob com qualidade reduzida
+                    canvas.toBlob(callback, 'image/jpeg', 0.8);
+                };
+            };
+        }
+        
+        // Refazer foto
+        retakeBtn.addEventListener('click', () => {
+            preview.classList.remove('show');
+            setTimeout(() => {
+                preview.style.display = 'none';
+                capturedBlob = null;
+                if (photoPreview.src) {
+                    URL.revokeObjectURL(photoPreview.src);
+                    photoPreview.src = '';
+                }
+                captureBtn.disabled = false;
+            }, 300);
+        });
+        
+        // Enviar foto
+        sendBtn.addEventListener('click', () => {
+            if (capturedBlob) {
+                uploadPhoto(capturedBlob);
+            }
+        });
         
         // Upload para Google Drive
         async function uploadPhoto(blob) {
-            captureBtn.disabled = true;
+            sendBtn.disabled = true;
+            retakeBtn.disabled = true;
             showStatus('Enviando foto...', 'info');
             
             try {
@@ -321,20 +566,32 @@
                     const result = await response.json();
                     
                     if (result.success) {
-                        showStatus('✓ Foto enviada com sucesso!', 'success');
+                        showStatus('Foto enviada com sucesso', 'success');
                         setTimeout(() => {
-                            preview.style.display = 'none';
-                            hideStatus();
-                            captureBtn.disabled = false;
+                            preview.classList.remove('show');
+                            setTimeout(() => {
+                                preview.style.display = 'none';
+                                hideStatus();
+                                sendBtn.disabled = false;
+                                retakeBtn.disabled = false;
+                                captureBtn.disabled = false;
+                                if (photoPreview.src) {
+                                    URL.revokeObjectURL(photoPreview.src);
+                                    photoPreview.src = '';
+                                }
+                                capturedBlob = null;
+                            }, 300);
                         }, 2000);
                     } else {
                         showStatus('Erro ao enviar: ' + result.error, 'error');
-                        captureBtn.disabled = false;
+                        sendBtn.disabled = false;
+                        retakeBtn.disabled = false;
                     }
                 };
             } catch (err) {
                 showStatus('Erro: ' + err.message, 'error');
-                captureBtn.disabled = false;
+                sendBtn.disabled = false;
+                retakeBtn.disabled = false;
             }
         }
         
@@ -353,9 +610,7 @@
         // Event listeners
         captureBtn.addEventListener('click', takePhoto);
         flipBtn.addEventListener('click', flipCamera);
-        
-        // Iniciar câmera ao carregar
-        startCamera();
     </script>
 </body>
 </html>
+
